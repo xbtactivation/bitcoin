@@ -1394,6 +1394,31 @@ uint256 GetSpentScriptsSHA256(const std::vector<CTxOut>& outputs_spent)
 
 } // namespace
 
+template<typename TxType>
+uint256 GetDefaultCheckTemplateVerifyHash(const TxType& tx, uint32_t input_index) {
+    return GetDefaultCheckTemplateVerifyHash(tx, GetOutputsSHA256(tx), GetSequencesSHA256(tx), input_index);
+}
+
+template<typename TxType>
+static bool NoScriptSigs(const TxType& tx)
+{
+    return std::all_of(tx.vin.begin(), tx.vin.end(), [](const CTxIn& c) { return c.scriptSig.empty(); });
+}
+
+template<typename TxType>
+uint256 GetDefaultCheckTemplateVerifyHash(const TxType& tx, const uint256& outputs_hash, const uint256& sequences_hash,
+                                const uint32_t input_index) {
+    return NoScriptSigs(tx) ? GetDefaultCheckTemplateVerifyHashEmptyScript(tx, outputs_hash, sequences_hash, input_index) :
+        GetDefaultCheckTemplateVerifyHashWithScript(tx, outputs_hash, sequences_hash, GetScriptSigsSHA256(tx), input_index);
+}
+
+template
+uint256 GetDefaultCheckTemplateVerifyHash(const CTransaction& tx, const uint256& outputs_hash, const uint256& sequences_hash,
+                                const uint32_t input_index);
+template
+uint256 GetDefaultCheckTemplateVerifyHash(const CMutableTransaction& tx, const uint256& outputs_hash, const uint256& sequences_hash,
+                                const uint32_t input_index);
+
 template <class T>
 void PrecomputedTransactionData::Init(const T& txTo, std::vector<CTxOut>&& spent_outputs, bool force)
 {
